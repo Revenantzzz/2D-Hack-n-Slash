@@ -1,96 +1,244 @@
 using System.Collections;
-using System.Collections.Generic;
-using UnityEditor.AnimatedValues;
 using UnityEngine;
-using UnityEngine.InputSystem;
+using UnityEngine.Events;
 
-namespace RPG2D
+[RequireComponent(typeof(Rigidbody2D), typeof(Collider2D))]
+public class PlayerMovementController : MonoBehaviour
 {
-    public class PlayerMovementController : MonoBehaviour
+    [SerializeField] private ScriptableStats _stats;
+    private PlayerCombatController _playerCombat;
+    private Rigidbody2D _rb;
+    private CapsuleCollider2D _col;
+    private PlayerInput _input;
+
+    private Vector2 _frameVelocity;
+    private bool _cachedQueryStartInColliders;
+
+    private bool _isDead => _playerCombat.CheckIsDead();
+    public event UnityAction<bool, float> GroundedChanged;
+    public event UnityAction Jumped;
+    public event UnityAction Dash;
+
+    private float _time;
+
+    private void Awake()
+    { 
+        _playerCombat = GetComponent<PlayerCombatController>();
+        _rb = GetComponent<Rigidbody2D>();
+        _input = GetComponent<PlayerInput>();
+        _col = GetComponent<CapsuleCollider2D>();
+        _cachedQueryStartInColliders = Physics2D.queriesStartInColliders;
+    }
+    private void Start()
     {
-        const string ANIMBOOL_ISWALKING = "IsWalking";
+        InitializeInput();
+    }
+    private void InitializeInput()
+    {
+        _input.JumpHeld += PlayerJumpHeld;
+        _input.JumpPressed += PlayerJumpPressed;
+        _input.Dash += PlayerDash;
 
-        [SerializeField] PlayerSettingData Data;
-        PlayerController player;
-        PlayerJumpController JumpController;
-        PlayerDashController DashController;
+    }
 
-        float accelRate = 0;
-        float movement;
-        float runAccelAmount = 0;
-        float runDeccelAmount = 0;
+    private void Update()
+    {
+        _time += Time.deltaTime;
+        HandleMoveInput();
+        _jumpPressed = false;
+    }
+ 
+    private void FixedUpdate()
+    {
+        if (_isDead) return;
+        if (_playerCombat.IsResting) return;
+        CheckCollisions();
 
-        private bool MovingRight => player.MoveInput != Vector2.left;
-        public bool FacingRight => transform.localScale.x == 1;
-        private void Awake()
+        HandleJump();
+        HandleDirection();
+        HandleGravity();
+
+        ApplyMovement();
+    }
+
+    #region Horizontal Move
+
+    private Vector2 _move;
+    public bool CanMove => !_playerCombat.IsInCombat();
+    public Vector2 PlayerVelocity => _rb.velocity;
+
+    private bool _isFacingRight = true;
+    private void HandleMoveInput()
+    {
+        _move = _input.MoveVector;
+        _move.x = Mathf.Abs(_move.x) < _stats.HorizontalDeadZoneThreshold ? 0 : Mathf.Sign(_move.x);
+        _move.y = Mathf.Abs(_move.y) < _stats.VerticalDeadZoneThreshold ? 0 : Mathf.Sign(_move.y);
+    }
+    private void HandleDirection()
+    {
+        if (_move.x == 0 || !CanMove)
         {
-            player = GetComponent<PlayerController>();
-            JumpController = GetComponent<PlayerJumpController>();
-            DashController = GetComponent<PlayerDashController>();
+            var deceleration = _grounded ? _stats.GroundDeceleration : _stats.AirDeceleration;
+            _frameVelocity.x = Mathf.MoveTowards(_frameVelocity.x, 0, deceleration * Time.fixedDeltaTime);
         }
-        private void Start()
+        else
         {
-            runAccelAmount = (50 * Data.runAccel) / Data.maxSpeed;
-            runDeccelAmount = (50 * Data.runDeccel) / Data.maxSpeed;
+            _frameVelocity.x = Mathf.MoveTowards(_frameVelocity.x, _move.x * _stats.MaxSpeed, _stats.Acceleration * Time.fixedDeltaTime);
         }
-        private void FixedUpdate()
+        if (_isFacingRight && _move.x < 0)
         {
-            if(DashController.IsDashing)
-            {
-                if (DashController.IsEndDashing)
-                {
-                    HandleMove(Data.dashEndRunLerp);
-                }
-                return;
-            }           
-            if(JumpController.IsWallJumping)
-            {
-                HandleMove(Data.wallJumpRunLerp);
-                return;
-            }
-            HandleMove(1);
+            transform.localScale = new Vector3(-1, 1, 1);
+            _isFacingRight = false;
         }
-        private void HandleMove(float lerp)
+        else if (!_isFacingRight && _move.x > 0)
         {
-            Turn();         
-            float targetSpeed = player.MoveInput.x * Data.maxSpeed;
-            targetSpeed = Mathf.Lerp(player.RB.velocity.x, targetSpeed, lerp);
-            if(player.IsGrounded)
-            {
-                accelRate = ((Mathf.Abs(targetSpeed)) > 0.01f) ? runAccelAmount : runDeccelAmount;               
-            }
-            else
-            {
-                accelRate = (Mathf.Abs(targetSpeed) > 0.01f) ? runAccelAmount * Data.accelInAir : runDeccelAmount * Data.deccelInAir;
-            }
-            if ((player.IsJumping || player.IsFalling || JumpController.IsWallJumping) && Mathf.Abs(player.RB.velocity.y) < Data.jumpHangTimeThreshold)
-            {
-                accelRate *= Data.jumpHangAccelerationMultiple;
-                targetSpeed *= Data.jumpHangMaxSpeedMultiple;
-            }
-            if (Data.conserveMomentum &&
-                Mathf.Abs(player.RB.velocity.x) > Mathf.Abs(targetSpeed)&&
-                Mathf.Sign(player.RB.velocity.x) == Mathf.Sign(targetSpeed) && 
-                Mathf.Abs(targetSpeed) > 0.01f && 
-                player.IsGrounded)
-                {                
-                accelRate = 0;
-                } 
-            if(!player.IsGrounded && (player.HasLeftWall || player.HasRightWall))
-            {
-               accelRate = 0;
-            }
-            float speedDif = targetSpeed - player.RB.velocity.x;
-            movement = speedDif * accelRate;
-            player.RB.AddForce(movement * Vector2.right, ForceMode2D.Force);
-            player.Animator.SetBool(ANIMBOOL_ISWALKING, Mathf.Abs(movement) > 0.01f && !player.IsJumping);
-        }
-        private void Turn()
-        {
-            if ((MovingRight ^ FacingRight) && player.MoveInput.magnitude != 0f)
-            {
-                transform.localScale = new Vector2(transform.localScale.x * -1, transform.localScale.y);
-            }
+            transform.localScale = new Vector3(1, 1, 1);
+            _isFacingRight = true;
         }
     }
+
+    #endregion
+
+    #region Collisions
+
+    private float _frameLeftGrounded = float.MinValue;
+    private bool _grounded;
+
+    private void CheckCollisions()
+    {
+        Physics2D.queriesStartInColliders = false;
+
+        // Ground and Ceiling
+        bool groundHit = Physics2D.CapsuleCast(_col.bounds.center, _col.size, _col.direction, 0, Vector2.down, _stats.GrounderDistance, ~_stats.PlayerLayer);
+        bool ceilingHit = Physics2D.CapsuleCast(_col.bounds.center, _col.size, _col.direction, 0, Vector2.up, _stats.GrounderDistance, ~_stats.PlayerLayer);
+
+        // Hit a Ceiling
+        if (ceilingHit) _frameVelocity.y = Mathf.Min(0, _frameVelocity.y);
+
+        // Landed on the Ground
+        if (!_grounded && groundHit)
+        {
+            _grounded = true;
+            _coyoteUsable = true;
+            _bufferedJumpUsable = true;
+            _endedJumpEarly = false;
+            GroundedChanged?.Invoke(true, Mathf.Abs(_frameVelocity.y));
+        }
+        // Left the Ground
+        else if (_grounded && !groundHit)
+        {
+            _grounded = false;
+            _frameLeftGrounded = _time;
+            GroundedChanged?.Invoke(false, 0);
+        }
+
+        Physics2D.queriesStartInColliders = _cachedQueryStartInColliders;
+    }
+
+    #endregion
+
+    #region Jumping
+
+    private bool _jumpPressed;
+    private bool _jumpHeld;
+    private bool _jumpToConsume;
+    private bool _bufferedJumpUsable;
+    private bool _endedJumpEarly;
+    private bool _coyoteUsable;
+    private float _timeJumpWasPressed;
+
+    private void PlayerJumpPressed()
+    {
+        _jumpPressed = true;
+        _jumpToConsume = true;
+        _timeJumpWasPressed = _time;
+    }
+
+    private void PlayerJumpHeld(bool pressed)
+    {
+        _jumpHeld = pressed;
+    }
+
+    private bool HasBufferedJump => _bufferedJumpUsable && _time < _timeJumpWasPressed + _stats.JumpBuffer;
+    private bool CanUseCoyote => _coyoteUsable && !_grounded && _time < _frameLeftGrounded + _stats.CoyoteTime;
+
+    private void HandleJump()
+    {
+        if (!_endedJumpEarly && !_grounded && !_jumpHeld && _rb.velocity.y > 0) _endedJumpEarly = true;
+
+        if (!_jumpToConsume && !HasBufferedJump) return;
+
+        if (_grounded || CanUseCoyote) ExecuteJump();
+
+        _jumpToConsume = false;
+    }
+
+    private void ExecuteJump()
+    {
+        if (!CanMove) return;
+        _endedJumpEarly = false;
+        _timeJumpWasPressed = 0;
+        _bufferedJumpUsable = false;
+        _coyoteUsable = false;
+        _frameVelocity.y = _stats.JumpPower;
+        Jumped?.Invoke();
+    }
+
+    #endregion
+
+    #region Gravity
+
+    private void HandleGravity()
+    {
+        if (_grounded && _frameVelocity.y <= 0f)
+        {
+            _frameVelocity.y = _stats.GroundingForce;
+        }
+        else
+        {
+            var inAirGravity = _stats.FallAcceleration;
+            if (_endedJumpEarly && _frameVelocity.y > 0) inAirGravity *= _stats.JumpEndEarlyGravityModifier;
+            _frameVelocity.y = Mathf.MoveTowards(_frameVelocity.y, -_stats.MaxFallSpeed, inAirGravity * Time.fixedDeltaTime);
+        }
+    }
+
+    #endregion
+
+    #region  Dash
+    private bool _isDashing = false;
+    private bool _canDash = true;
+
+    private void PlayerDash()
+    {
+        if (_canDash && _grounded && CanMove)
+        {
+            StartCoroutine(Dashing());
+        }
+    }
+    private IEnumerator Dashing()
+    {
+        _canDash = false;
+        _isDashing = true;
+        _playerCombat.SetInvincilbe(true);
+        Dash?.Invoke();
+        yield return new WaitForSeconds(0.1f);
+
+        float orginGravity = _rb.gravityScale;
+        _rb.gravityScale = 0f;
+        _frameVelocity = new Vector2(transform.localScale.x * _stats.DashForce, 0f);
+        
+        yield return new WaitForSeconds(_stats.DashingTime - .1f);
+        _isDashing = false;
+        _rb.gravityScale = orginGravity;
+        _playerCombat.SetInvincilbe(false);
+
+        yield return new WaitForSeconds(_stats.DashingCooldown - .1f);
+        _canDash = true;
+    }
+    #endregion
+
+    private void ApplyMovement() => _rb.velocity = _frameVelocity;
+
 }
+
+

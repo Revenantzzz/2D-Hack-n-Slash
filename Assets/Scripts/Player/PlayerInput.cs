@@ -1,43 +1,93 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Events;
 using UnityEngine.InputSystem;
+using UnityEngine.Events;
 
-namespace RPG2D
+public class PlayerInput : MonoBehaviour
 {
-    public class PlayerInput : MonoBehaviour
-    {
-        public event UnityAction OnPlayerJump;
-        public event UnityAction OnPlayerDash;
-        public event UnityAction OnPlayerAttack;
-        public Vector2 MoveDirection => move.normalized;
+    public event UnityAction<bool> JumpHeld;
+    public event UnityAction JumpPressed;
+    public event UnityAction<bool> Attack;
+    public event UnityAction Dash;
+    public event UnityAction<bool> BlockHeld;
+    public event UnityAction BlockPressed;
+    public event UnityAction Heal;
+    public event UnityAction Interact;
+    public event UnityAction Cast;
+    public event UnityAction<bool> ChargeCast;
+    public Vector2 MoveVector { get; private set; }
 
-        private Vector2 move;
-        public void OnMove(InputAction.CallbackContext context)
+    public void OnMove(InputAction.CallbackContext context)
+    {
+        MoveVector = context.ReadValue<Vector2>();
+    }
+    public void OnJump(InputAction.CallbackContext context)
+    {
+        if(context.started)
         {
-            move = context.ReadValue<Vector2>();
+            JumpHeld?.Invoke(true);
+            JumpPressed?.Invoke();
         }
-        public void OnJump(InputAction.CallbackContext context)
+        else if(context.canceled)
         {
-            if (context.started)
-            {
-                OnPlayerJump?.Invoke();
-            }          
+            JumpHeld?.Invoke(false);  
         }
-        public void OnDash(InputAction.CallbackContext context)
+    }
+    public void OnAttack(InputAction.CallbackContext context)
+    {
+        if(context.started)
         {
-            if(context.started)
-            {
-                OnPlayerDash?.Invoke();
-            }          
+            Attack.Invoke(true);
         }
-        public void OnAttack(InputAction.CallbackContext context)
+        else if(context.canceled)
         {
-            if(context.started)
-            {
-                OnPlayerAttack.Invoke();
-            }
+            Attack.Invoke(false);
         }
+    }
+    public void OnDash(InputAction.CallbackContext context)
+    {
+        if(context.started)
+        {
+            Dash?.Invoke();
+        }
+    }
+    public void OnBlock(InputAction.CallbackContext context)
+    {
+        if(context.started)
+        {
+            BlockPressed?.Invoke();
+            BlockHeld?.Invoke(true);
+        }
+        else if(context.canceled)
+        {
+            BlockHeld?.Invoke(false);
+        }
+    }
+
+    public void OnHeal(InputAction.CallbackContext context)
+    {
+        if(context.started)
+        {
+            Heal?.Invoke();
+        }
+    }  
+    
+    public void OnInteract(InputAction.CallbackContext context)
+    {
+        if(context.started)
+        {
+            Interact?.Invoke();
+        }
+    }
+    public void OnCast(InputAction.CallbackContext context)
+    {
+        if(context.started)
+        {
+            ChargeCast?.Invoke(true);
+        }
+        if(context.canceled)
+        {
+            ChargeCast?.Invoke(false);
+            Cast?.Invoke();
+        }        
     }
 }

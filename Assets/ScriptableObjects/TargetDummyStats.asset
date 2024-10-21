@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1752c7d1ea6c5c54da1005791549e39a, type: 3}
+  m_Name: TargetDummyStats
+  m_EditorClassIdentifier: 
+  Hp: 50000
+  CanHaveMovement: 0
+  MoveSpeed: 5
+  ChaseSpeed: 7
+  TimeToChangeDis: 1
+  DetectingRange: 5
+  StopDetectTime: 2.5
+  DetectDelay: 0.5
+  CanAttackPlayer: 0
+  Atk: 50
+  AttackRange: 2
+  AttackDelay: 0.5
+  AttackTime: 1
+  AttackCooldown: 5
