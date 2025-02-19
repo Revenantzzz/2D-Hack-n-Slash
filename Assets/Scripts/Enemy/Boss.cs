@@ -36,7 +36,7 @@ public class Boss : Enemy
         if(_healthSystem.IsDead) return;
         PlayerInBossRoom();
         if (!_seenPlayer) return;
-        _rb.velocity = new Vector2(MoveVelocity.x, _rb.velocity.y);
+        _rb.linearVelocity = new Vector2(MoveVelocity.x, _rb.linearVelocity.y);
         AttackPlayer();
         if(_healthSystem.GetCurrentHeal() >= 0.5f)
         {

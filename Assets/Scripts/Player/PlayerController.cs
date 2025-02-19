@@ -13,14 +13,14 @@ namespace RPG2D
         public bool IsGrounded => checkBlock.IsGrounded;
         public bool HasRightWall => checkBlock.HasRightWall;
         public bool HasLeftWall => checkBlock.HasLeftWall;
-        public bool IsJumping => RB.velocity.y > 0.1f;
-        public bool IsFalling => RB.velocity.y < -0.1f;
+        public bool IsJumping => RB.linearVelocity.y > 0.1f;
+        public bool IsFalling => RB.linearVelocity.y < -0.1f;
         private PlayerInput Input;
         private CheckBlock checkBlock;
 
         public event UnityAction PlayerJump;
         public event UnityAction PlayerDash;
-        public event UnityAction PlayerAttack;
+        public event UnityAction<bool> PlayerAttack;
 
         private void Awake()
         {
@@ -31,9 +31,9 @@ namespace RPG2D
         }
         private void Start()
         {
-            Input.OnPlayerJump += Jump;
-            Input.OnPlayerDash += Dash;
-            Input.OnPlayerAttack += Attack;
+            Input.JumpPressed += Jump;
+            Input.Dash += Dash;
+            Input.Attack += Attack;
         }
         private void Update()
         {
@@ -47,9 +47,9 @@ namespace RPG2D
         {
             PlayerDash.Invoke();
         }
-        public void Attack()
+        public void Attack(bool arg0)
         {
-            PlayerAttack.Invoke();  
+            PlayerAttack.Invoke(arg0);  
         }
         public void SetGravityScale(float scale)
         {

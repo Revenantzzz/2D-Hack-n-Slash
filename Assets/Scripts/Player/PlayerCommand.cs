@@ -24,7 +24,7 @@ namespace RPG2D
 
         public override void Execute()
         {
-            player.Attack();
+            player.Attack(true);
         }
     }
     public class JumpCommand : PlayerCommand

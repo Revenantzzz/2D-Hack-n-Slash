@@ -1,4 +1,5 @@
 using System.Collections;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -8,6 +9,8 @@ public class Enemy : MonoBehaviour
     protected Rigidbody2D _rb;
     protected EnemyCombat _combat;
     protected HealthSystem _healthSystem;
+    protected SpriteRenderer _sprite;
+    protected CapsuleCollider2D _enemyCol;
 
     [SerializeField] protected Transform _firstPoint;
     [SerializeField] protected Transform _secondPoint;
@@ -35,6 +38,8 @@ public class Enemy : MonoBehaviour
         _rb = GetComponent<Rigidbody2D>();
         _combat = GetComponent<EnemyCombat>();
         _healthSystem = GetComponentInChildren<HealthSystem>();
+        _sprite = GetComponent<SpriteRenderer>();
+        _enemyCol = GetComponent<CapsuleCollider2D>();
         InitializeRoute();
     }
     protected virtual void InitializeRoute()
@@ -56,7 +61,7 @@ public class Enemy : MonoBehaviour
         if (_stats.CanHaveMovement)
         {
             MoveOnRoute();
-            _rb.velocity = new Vector2(MoveVelocity.x, _rb.velocity.y);
+            _rb.linearVelocity = new Vector2(MoveVelocity.x, _rb.linearVelocity.y);
             ChasePlayer();
             Move?.Invoke((Mathf.Abs(MoveVelocity.x) > 0) && !_combat.IsInCombat());
         }
@@ -69,7 +74,7 @@ public class Enemy : MonoBehaviour
     {
         if (!CanMove) return;
         moveDir = currentTarget.x - transform.position.x > 0 ? 1f : -1f;
-        MoveVelocity = new Vector2(speed * moveDir, _rb.velocity.y);
+        MoveVelocity = new Vector2(speed * moveDir, _rb.linearVelocity.y);
     }
     protected virtual void MoveOnRoute()
     {
@@ -159,11 +164,16 @@ public class Enemy : MonoBehaviour
 
     protected void ResetCheckpoint()
     {
-        if(this.gameObject == null) return;
-        this.gameObject.SetActive(false);
+        Debug.Log(PlayerCombatController.Instance.IsResting);
+
+        StopChasingPlayer();
+        this.transform.position = new Vector3(pointA.x, this.transform.position.y, this.transform.position.z);
+        _currentPoint = pointB;
+        transform.localScale = new Vector3(1, 1, 1);
+        _isWaiting = false;
         if (!PlayerCombatController.Instance.IsResting)
         {
-            this.gameObject.SetActive(true);
+            _healthSystem.RestoreHPAtCheckPoint();
         }
     }
     protected void OnDisable()
@@ -172,5 +182,10 @@ public class Enemy : MonoBehaviour
         this.transform.position = new Vector3(pointA.x, this.transform.position.y, this.transform.position.z);
         _currentPoint = pointB;
         _isWaiting = false;
+    }
+    protected void Onable()
+    {
+        _healthSystem.RestoreHPAtCheckPoint();
+        Debug.Log(_healthSystem.ToString());
     }
 }

@@ -1,12 +1,13 @@
 using UnityEngine;
-using UnityEngine.InputSystem;
 using UnityEngine.Events;
+using UnityEngine.InputSystem;
+using static Input_Actions;
 
-public class PlayerInput : MonoBehaviour
+public class PlayerInput : MonoBehaviour, IPlayerActions
 {
     public event UnityAction<bool> JumpHeld;
     public event UnityAction JumpPressed;
-    public event UnityAction<bool> Attack;
+    public event UnityAction <bool> Attack;
     public event UnityAction Dash;
     public event UnityAction<bool> BlockHeld;
     public event UnityAction BlockPressed;
@@ -16,6 +17,7 @@ public class PlayerInput : MonoBehaviour
     public event UnityAction<bool> ChargeCast;
     public Vector2 MoveVector { get; private set; }
 
+    public Vector2 MoveDirection => MoveVector;
     public void OnMove(InputAction.CallbackContext context)
     {
         MoveVector = context.ReadValue<Vector2>();
@@ -90,4 +92,5 @@ public class PlayerInput : MonoBehaviour
             Cast?.Invoke();
         }        
     }
+
 }

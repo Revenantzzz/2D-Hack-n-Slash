@@ -32,6 +32,7 @@ public class PlayerMovementController : MonoBehaviour
     private void Start()
     {
         InitializeInput();
+        IsFacingRight = true;
     }
     private void InitializeInput()
     {
@@ -65,9 +66,9 @@ public class PlayerMovementController : MonoBehaviour
 
     private Vector2 _move;
     public bool CanMove => !_playerCombat.IsInCombat();
-    public Vector2 PlayerVelocity => _rb.velocity;
+    public Vector2 PlayerVelocity => _rb.linearVelocity;
 
-    private bool _isFacingRight = true;
+    public bool IsFacingRight {get; private set;}
     private void HandleMoveInput()
     {
         _move = _input.MoveVector;
@@ -85,15 +86,15 @@ public class PlayerMovementController : MonoBehaviour
         {
             _frameVelocity.x = Mathf.MoveTowards(_frameVelocity.x, _move.x * _stats.MaxSpeed, _stats.Acceleration * Time.fixedDeltaTime);
         }
-        if (_isFacingRight && _move.x < 0)
+        if (IsFacingRight && _move.x < 0)
         {
             transform.localScale = new Vector3(-1, 1, 1);
-            _isFacingRight = false;
+            IsFacingRight = false;
         }
-        else if (!_isFacingRight && _move.x > 0)
+        else if (!IsFacingRight && _move.x > 0)
         {
             transform.localScale = new Vector3(1, 1, 1);
-            _isFacingRight = true;
+            IsFacingRight = true;
         }
     }
 
@@ -164,7 +165,7 @@ public class PlayerMovementController : MonoBehaviour
 
     private void HandleJump()
     {
-        if (!_endedJumpEarly && !_grounded && !_jumpHeld && _rb.velocity.y > 0) _endedJumpEarly = true;
+        if (!_endedJumpEarly && !_grounded && !_jumpHeld && _rb.linearVelocity.y > 0) _endedJumpEarly = true;
 
         if (!_jumpToConsume && !HasBufferedJump) return;
 
@@ -237,7 +238,7 @@ public class PlayerMovementController : MonoBehaviour
     }
     #endregion
 
-    private void ApplyMovement() => _rb.velocity = _frameVelocity;
+    private void ApplyMovement() => _rb.linearVelocity = _frameVelocity;
 
 }
 

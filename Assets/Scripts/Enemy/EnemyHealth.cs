@@ -33,7 +33,6 @@ public class EnemyHealth : HealthSystem
     }
     public override void GetDMG(float dmg)
     {
-        Debug.Log(dmg);
         _hp.Damaged(dmg);
         Damaged?.Invoke(dmg);
     }

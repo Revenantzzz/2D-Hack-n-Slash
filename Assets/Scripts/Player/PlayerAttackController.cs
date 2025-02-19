@@ -34,7 +34,7 @@ namespace RPG2D
             AttackCoolDown.Tick(Time.deltaTime);
             AttackComboCountdown.Tick(Time.deltaTime);
         }
-        private void Attack()
+        private void Attack(bool attacking)
         {
             if(!AttackCoolDown.IsRunning)
             {

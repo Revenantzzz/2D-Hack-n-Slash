@@ -82,9 +82,9 @@ namespace RPG2D
             if(jumpTimer.IsRunning && (IsGrounded(player.IsGrounded)))
             {
                 float force = Data.jumpForce;
-                if (player.RB.velocity.y < 0)
+                if (player.RB.linearVelocity.y < 0)
                 {
-                    force -= player.RB.velocity.y;
+                    force -= player.RB.linearVelocity.y;
                 }
                 player.RB.AddForce(Vector2.up * force, ForceMode2D.Impulse);
                 IsJumpCut = true;
@@ -101,11 +101,11 @@ namespace RPG2D
                 Vector2 force = new Vector2(Data.wallJumpForce.x, Data.wallJumpForce.y);
                 force.x *= dir; //apply force in opposite direction of wall
 
-                if (Mathf.Sign(player.RB.velocity.x) != Mathf.Sign(force.x))
-                    force.x -= player.RB.velocity.x;
+                if (Mathf.Sign(player.RB.linearVelocity.x) != Mathf.Sign(force.x))
+                    force.x -= player.RB.linearVelocity.x;
 
-                if (player.RB.velocity.y < 0) //checks whether player is falling, if so we subtract the velocity.y (counteracting force of gravity). This ensures the player always reaches our desired jump force or greater
-                    force.y -= player.RB.velocity.y;
+                if (player.RB.linearVelocity.y < 0) //checks whether player is falling, if so we subtract the velocity.y (counteracting force of gravity). This ensures the player always reaches our desired jump force or greater
+                    force.y -= player.RB.linearVelocity.y;
 
                 player.RB.AddForce(force, ForceMode2D.Impulse);
                 IsJumpCut = true;
@@ -117,31 +117,31 @@ namespace RPG2D
         private void ManageGravity()
         {
             //Hard falling
-            if (player.RB.velocity.y < 0 && player.MoveInput.y < 0)
+            if (player.RB.linearVelocity.y < 0 && player.MoveInput.y < 0)
             {
                 IsHardFalling = true;
                 player.SetGravityScale(Data.gravityScale * Data.fastFallGravityMultiple);
-                player.RB.velocity = 
-                    new Vector2(player.RB.velocity.x, Mathf.Max(player.RB.velocity.y, - Data.maxFallSpeed));
+                player.RB.linearVelocity = 
+                    new Vector2(player.RB.linearVelocity.x, Mathf.Max(player.RB.linearVelocity.y, - Data.maxFallSpeed));
                 return;
             }
             //After a jump perform
             if(IsJumpCut)
             {
                 player.SetGravityScale(Data.gravityScale * Data.jumpCutGravityMultiple);
-                player.RB.velocity =
-                    new Vector2(player.RB.velocity.x, Mathf.Max(player.RB.velocity.y, -Data.maxFallSpeed));
+                player.RB.linearVelocity =
+                    new Vector2(player.RB.linearVelocity.x, Mathf.Max(player.RB.linearVelocity.y, -Data.maxFallSpeed));
                 return;
             }
-            if((player.IsJumping || player.IsFalling || IsWallJumping) && Mathf.Abs(player.RB.velocity.y) < Data.jumpHangTimeThreshold)
+            if((player.IsJumping || player.IsFalling || IsWallJumping) && Mathf.Abs(player.RB.linearVelocity.y) < Data.jumpHangTimeThreshold)
             {
                 player.SetGravityScale(Data.gravityScale * Data.jumpCutGravityMultiple);
             }
             if(player.IsFalling)
             {
                 player.SetGravityScale(Data.gravityScale * Data.fallGravityMultiple);
-                player.RB.velocity =
-                    new Vector2(player.RB.velocity.x, Mathf.Max(player.RB.velocity.y, -Data.maxFallSpeed));
+                player.RB.linearVelocity =
+                    new Vector2(player.RB.linearVelocity.x, Mathf.Max(player.RB.linearVelocity.y, -Data.maxFallSpeed));
                 return;
             }
 

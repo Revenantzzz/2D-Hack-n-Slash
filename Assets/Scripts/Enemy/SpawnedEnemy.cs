@@ -15,7 +15,7 @@ public class SpawnedEnemy : Enemy
     {
         GetDistanceToPlayer();
         if (_combat.CheckIsDead()) return;
-        _rb.velocity = new Vector2(MoveVelocity.x, _rb.velocity.y);
+        _rb.linearVelocity = new Vector2(MoveVelocity.x, _rb.linearVelocity.y);
         if (!this.gameObject.activeSelf) return;
         _seenPlayer = true;
         _isChasingPlayer = true;

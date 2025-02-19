@@ -70,7 +70,7 @@ namespace RPG2D
                 player.Animator.SetTrigger("Dash");
                 player.SetGravityScale(0);
                 Vector2 dir = Vector2.right;
-                if (!movement.FacingRight)
+                if (!movement.IsFacingRight)
                 {
                     dir = Vector2.left;
                 }
